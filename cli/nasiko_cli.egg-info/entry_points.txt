@@ -1,0 +1,2 @@
+[console_scripts]
+nasiko = main:main

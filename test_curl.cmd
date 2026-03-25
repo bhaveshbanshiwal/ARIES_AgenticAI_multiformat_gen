@@ -1,0 +1,3 @@
+curl -X POST http://localhost:10010/ -H "Content-Type: application/json" -d "{\"jsonrpc\": \"2.0\", \"id\": \"req-001\", \"method\": \"message/send\", \"params\": {\"session_id\": \"test-session-02\", \"message\": {\"role\": \"user\", \"parts\": [{\"kind\": \"text\", \"text\": \"Build a sales performance tracker for Q1 with columns for rep name, deals closed, revenue, and quota attainment : values are Mahima, 4, 240000, Yes\"}], \"messageId\": \"msg-001\"}}}"
+
+pause
