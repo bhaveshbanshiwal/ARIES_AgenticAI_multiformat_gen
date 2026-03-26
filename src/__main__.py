@@ -3,6 +3,8 @@ import os
 import click
 import uvicorn
 from dotenv import load_dotenv
+from starlette.middleware import Middleware
+from starlette.middleware.cors import CORSMiddleware
 
 from starlette.applications import Starlette
 from a2a.server.apps import A2AStarletteApplication
@@ -94,6 +96,9 @@ class CustomDocumentExecutor:
             logger.debug(f"Task completion note: {e}")
 
 
+        
+
+
 
 @click.command()
 @click.option("--host", "host", default="0.0.0.0")
@@ -123,7 +128,7 @@ def main(host: str, port: int):
     agent_card = AgentCard(
         name="Document Creator Agent",
         description="Autonomously plans and generates formatted documents (PPTX, DOCX, XLSX) with embedded charts.",
-        url=f"http://{host}:{port}/",
+        url="http://a2a-document-generator:5000/",
         version="1.0.0",
         default_input_modes=["text"],
         default_output_modes=["text"],
@@ -154,10 +159,23 @@ def main(host: str, port: int):
         agent_card=agent_card, 
         http_handler=request_handler
     )
+
+    # ADD THESE LINES TO ALLOW CORS PREFLIGHT REQUESTS
+    middleware = [
+        Middleware(
+            CORSMiddleware, 
+            allow_origins=['*'], # Allows all domains
+            allow_methods=['*'], # Allows all methods (GET, POST, OPTIONS, etc.)
+            allow_headers=['*']  # Allows all headers
+        )
+    ]
     
-    app = Starlette(routes=a2a_app.routes())
+    # Pass the middleware into the Starlette app
+    app = Starlette(routes=a2a_app.routes(), middleware=middleware)
+    
     logger.info(f"Starting Document Creator Agent on {host}:{port}")
     uvicorn.run(app, host=host, port=port)
+
 
 if __name__ == "__main__":
     main()
