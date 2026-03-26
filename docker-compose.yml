@@ -7,6 +7,7 @@ services:
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - AGENT_PUBLIC_URL=${AGENT_PUBLIC_URL}
+      - OUTPUT_DIR=/app/output
     ports:
       - "10010:5000"
     volumes:
@@ -17,3 +18,4 @@ services:
 networks:
   agents-net:
     external: true
+

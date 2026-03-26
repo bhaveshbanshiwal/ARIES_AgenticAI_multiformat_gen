@@ -8,9 +8,46 @@ from docx import Document
 from docx.shared import Inches as DocxInches
 from langchain_core.tools import tool
 
-# Explicitly use the Docker volume path
-OUTPUT_DIR = "/app/output"
+OUTPUT_DIR = os.getenv("OUTPUT_DIR", os.path.join(os.getcwd(), "output"))
 os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+@tool
+def read_document(filename: str) -> str:
+    """
+    Reads the current text/data content of an existing DOCX, PPTX, or XLSX file.
+    Always use this BEFORE modifying a document to know its current state and structure.
+    """
+    filepath = os.path.join(OUTPUT_DIR, filename)
+    if not os.path.exists(filepath):
+        return f"Error: File {filename} does not exist in {OUTPUT_DIR}."
+    
+    ext = filename.split('.')[-1].lower()
+    try:
+        if ext == 'docx':
+            doc = Document(filepath)
+            return "\n".join([p.text for p in doc.paragraphs if p.text.strip()])
+        elif ext == 'xlsx':
+            import pandas as pd
+            # Read all sheets into a dictionary of lists
+            df_dict = pd.read_excel(filepath, sheet_name=None)
+            result = {}
+            for sheet, df in df_dict.items():
+                result[sheet] = json.loads(df.to_json(orient="records"))
+            return json.dumps(result)
+        elif ext == 'pptx':
+            prs = Presentation(filepath)
+            content = []
+            for i, slide in enumerate(prs.slides):
+                slide_text = []
+                for shape in slide.shapes:
+                    if hasattr(shape, "text") and shape.text.strip():
+                        slide_text.append(shape.text.strip())
+                content.append(f"Slide {i+1}: {' | '.join(slide_text)}")
+            return "\n".join(content)
+        else:
+            return "Unsupported file type for reading."
+    except Exception as e:
+        return f"Error reading file: {str(e)}"
 
 @tool
 def generate_chart(title: str, labels: List[str], values: List[float], chart_type: str = "bar") -> str:
@@ -37,7 +74,7 @@ def generate_chart(title: str, labels: List[str], values: List[float], chart_typ
 @tool
 def create_pptx(filename: str, slides_data: str) -> str:
     """
-    Generates a PPTX presentation.
+    Generates or overwrites a PPTX presentation.
     slides_data must be a JSON string representing a list of dictionaries:
     [{"title": "Slide 1", "bullets": ["Point 1", "Point 2"], "image_path": "optional/path.png"}]
     """
@@ -64,14 +101,14 @@ def create_pptx(filename: str, slides_data: str) -> str:
                 
         filepath = os.path.join(OUTPUT_DIR, filename)
         prs.save(filepath)
-        return f"Successfully created PPTX at: {filepath}"
+        return f"Successfully created/updated PPTX at: {filepath}"
     except Exception as e:
         return f"Error creating PPTX: {str(e)}"
 
 @tool
 def create_docx(filename: str, title: str, sections_data: str) -> str:
     """
-    Generates a DOCX report.
+    Generates or overwrites a DOCX report.
     sections_data must be a JSON string representing a list of dictionaries:
     [{"heading": "Section 1", "content": "Paragraph text", "image_path": "optional/path.png"}]
     """
@@ -89,14 +126,14 @@ def create_docx(filename: str, title: str, sections_data: str) -> str:
                 
         filepath = os.path.join(OUTPUT_DIR, filename)
         doc.save(filepath)
-        return f"Successfully created DOCX at: {filepath}"
+        return f"Successfully created/updated DOCX at: {filepath}"
     except Exception as e:
         return f"Error creating DOCX: {str(e)}"
 
 @tool
 def create_xlsx(filename: str, sheet_name: str, data: str) -> str:
     """
-    Generates an XLSX spreadsheet.
+    Generates or overwrites an XLSX spreadsheet.
     data must be a JSON string representing a list of dictionaries.
     """
     try:
@@ -106,12 +143,11 @@ def create_xlsx(filename: str, sheet_name: str, data: str) -> str:
         
         filepath = os.path.join(OUTPUT_DIR, filename)
         df.to_excel(filepath, index=False, sheet_name=sheet_name)
-        return f"Successfully created XLSX at: {filepath}"
+        return f"Successfully created/updated XLSX at: {filepath}"
     except Exception as e:
         return f"Error creating XLSX: {str(e)}"
     
-
-
 class DocumentToolset:
     def get_tools(self) -> list:
-        return [generate_chart, create_pptx, create_docx, create_xlsx]
+        # Added read_document to the toolset
+        return [read_document, generate_chart, create_pptx, create_docx, create_xlsx]

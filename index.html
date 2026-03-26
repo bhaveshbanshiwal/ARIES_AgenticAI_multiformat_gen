@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agentic Document Creator</title>
+    <style>
+        :root {
+            --primary-bg: #f4f7f6;
+            --chat-bg: #ffffff;
+            --user-msg: #007bff;
+            --agent-msg: #e9ecef;
+            --text-dark: #333333;
+            --text-light: #ffffff;
+            --border: #dee2e6;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--primary-bg);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .chat-container {
+            width: 100%;
+            max-width: 800px;
+            height: 90vh;
+            background: var(--chat-bg);
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background-color: var(--user-msg);
+            color: var(--text-light);
+            padding: 20px;
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        .chat-box {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 14px 18px;
+            border-radius: 8px;
+            line-height: 1.5;
+            word-wrap: break-word;
+            white-space: pre-wrap; 
+        }
+
+        .user-message {
+            align-self: flex-end;
+            background-color: var(--user-msg);
+            color: var(--text-light);
+            border-bottom-right-radius: 2px;
+        }
+
+        .agent-message {
+            align-self: flex-start;
+            background-color: var(--agent-msg);
+            color: var(--text-dark);
+            border-bottom-left-radius: 2px;
+        }
+
+        .loading-indicator {
+            align-self: flex-start;
+            color: #888;
+            font-style: italic;
+            font-size: 0.9rem;
+            display: none;
+        }
+
+        .input-area {
+            display: flex;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-top: 1px solid var(--border);
+        }
+
+        .input-area textarea {
+            flex: 1;
+            resize: none;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 1rem;
+            outline: none;
+            height: 50px;
+        }
+
+        .input-area textarea:focus {
+            border-color: var(--user-msg);
+        }
+
+        .input-area button {
+            background-color: var(--user-msg);
+            color: white;
+            border: none;
+            padding: 0 24px;
+            margin-left: 15px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .input-area button:hover {
+            background-color: #0056b3;
+        }
+
+        .input-area button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .download-btn {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 10px 16px;
+            background-color: #28a745;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 0.95rem;
+            transition: background-color 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .download-btn:hover {
+            background-color: #218838;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="chat-container">
+        <div class="chat-header">
+            Document Creator Agent
+        </div>
+        
+        <div class="chat-box" id="chatBox">
+            <div class="message agent-message">Hello! I am your AI Document Agent. I can create and edit PPTX, DOCX, and XLSX files for you. What would you like to build today?</div>
+            <div id="loadingIndicator" class="loading-indicator">Agent is thinking and generating files...</div>
+        </div>
+
+        <div class="input-area">
+            <textarea id="userInput" placeholder="e.g., Create a 10-slide pitch deck for fitness and workout..." onkeydown="handleEnter(event)"></textarea>
+            <button id="sendBtn" onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        const SESSION_ID = "web-session-" + Math.random().toString(36).substring(2, 9);
+        const BACKEND_URL = "http://localhost:10010/";
+
+        const chatBox = document.getElementById("chatBox");
+        const userInput = document.getElementById("userInput");
+        const sendBtn = document.getElementById("sendBtn");
+        const loadingIndicator = document.getElementById("loadingIndicator");
+
+        function handleEnter(event) {
+            if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+        function appendMessage(text, sender, isHtml = false) {
+            const msgDiv = document.createElement("div");
+            msgDiv.classList.add("message");
+            msgDiv.classList.add(sender === "user" ? "user-message" : "agent-message");
+            
+            if (isHtml) {
+                msgDiv.innerHTML = text;
+            } else {
+                msgDiv.textContent = text;
+            }
+            
+            chatBox.insertBefore(msgDiv, loadingIndicator);
+            scrollToBottom();
+        }
+
+        function scrollToBottom() {
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function formatTextWithDownloadLinks(text) {
+
+            const regex = /([a-zA-Z0-9_\\\/\-\.\:]+\.(pptx|docx|xlsx|png))/gi;
+            
+            return text.replace(regex, (match) => {
+
+                const fileName = match.split('\\').pop().split('/').pop();
+
+                return `<strong>${fileName}</strong><br><a href="output/${fileName}" target="_blank" download class="download-btn">⬇️ Download ${fileName}</a>`;
+            });
+        }
+
+        async function sendMessage() {
+            const text = userInput.value.trim();
+            if (!text) return;
+
+            appendMessage(text, "user");
+            userInput.value = "";
+            sendBtn.disabled = true;
+            loadingIndicator.style.display = "block";
+            scrollToBottom();
+
+            const payload = {
+                jsonrpc: "2.0",
+                id: "req-" + Date.now(),
+                method: "message/send",
+                params: {
+                    session_id: SESSION_ID,
+                    message: {
+                        role: "user",
+                        parts: [{ kind: "text", text: text }],
+                        messageId: "msg-" + Date.now()
+                    }
+                }
+            };
+
+            try {
+                const response = await fetch(BACKEND_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+                
+                let agentReply = "No response received.";
+                
+                if (data.error) {
+                    agentReply = "Error: " + data.error.message;
+                } else if (data.result) {
+                    if (data.result.parts && data.result.parts.length > 0) {
+                        // Extract text from the parts array
+                        agentReply = data.result.parts.map(p => p.text).join('\n');
+                    } else if (typeof data.result === "string") {
+                        agentReply = data.result;
+                    } else {
+                        agentReply = JSON.stringify(data.result, null, 2);
+                    }
+                }
+
+                const formattedHtmlReply = formatTextWithDownloadLinks(agentReply);
+
+                appendMessage(formattedHtmlReply, "agent", true);
+
+            } catch (error) {
+                console.error("Fetch error:", error);
+                appendMessage("Failed to connect to the backend. Is your agent running on port 10010?", "agent");
+            } finally {
+                sendBtn.disabled = false;
+                loadingIndicator.style.display = "none";
+                userInput.focus();
+                scrollToBottom();
+            }
+        }
+    </script>
+</body>
+</html>
