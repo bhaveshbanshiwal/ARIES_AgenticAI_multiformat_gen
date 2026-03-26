@@ -1,0 +1,39 @@
+{
+  "protocolVersion": "0.2.9",
+  "name": "Document Creator Agent",
+  "description": "Autonomously plans and generates formatted documents (PPTX, DOCX, XLSX) with embedded charts, tabular data, and structured layouts based on natural language briefs.",
+  "url": "http://a2a-document-generator:5000/",
+  "agentFramework": "openai",
+  "preferredTransport": "JSONRPC",
+  "provider": {
+    "organization": "Nasiko AI Projects"
+  },
+  "version": "1.0.0",
+  "capabilities": {
+    "streaming": true,
+    "stateTransitionHistory": true,
+    "chat_agent": false
+  },
+  "defaultInputModes": ["text/plain"],
+  "defaultOutputModes": [
+    "text/plain", 
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+  ],
+  "skills": [
+    {
+      "id": "generate-document",
+      "name": "Generate Document",
+      "description": "Determine format, plan content, and generate a PPTX, DOCX, or XLSX file.",
+      "tags": ["document", "pptx", "docx", "xlsx", "presentation", "report", "spreadsheet"],
+      "examples": [
+        "Create a 5-slide pitch deck for a fintech startup",
+        "Write a competitive analysis report on project management tools as a DOCX",
+        "Build a sales tracker for Q1 with columns for rep name, revenue, and attainment"
+      ],
+      "inputModes": ["text"],
+      "outputModes": ["application/json"]
+    }
+  ]
+}

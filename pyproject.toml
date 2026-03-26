@@ -1,0 +1,27 @@
+[project]
+name = "a2a-document-generator"
+version = "0.3.0"
+description = "Advanced A2A Document Generator with Charts"
+requires-python = ">=3.10"
+dependencies = [
+    "a2a-sdk>=0.3.0",
+    "click>=8.1.8",
+    "python-dotenv>=1.1.0",
+    "uvicorn>=0.34.2",
+    "openai>=1.57.0",
+    "pandas",
+    "openpyxl",
+    "python-docx",
+    "python-pptx",
+    "matplotlib"
+]
+
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
